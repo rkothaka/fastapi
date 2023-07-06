@@ -1,8 +1,17 @@
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel
 from typing import Optional, Tuple
 from random import randrange
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import time
+import models
+from database import engine, SessionLocal
+from sqlalchemy.orm import Session
+
+
+models.Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI()
@@ -13,6 +22,25 @@ class Post(BaseModel):
     content: str
     published: bool = True
     rating: Optional[int] = None
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+while True:
+    try:
+        conn = psycopg2.connect(host='localhost', database='fastapi', user='postgres',
+                                password='root', cursor_factory=RealDictCursor)
+        cursor = conn.cursor()
+        print("Database connection was successful!")
+        break
+    except Exception as error:
+        print("Connecting to Database failed")
+        print("Error", error)
+        time.sleep(5)
 
 
 my_posts = [{"title": "Title1", "content": "Content1", "id": 1}, {"title": "Title2", "content": "Content2", "id": 2}]
@@ -26,6 +54,11 @@ def root():
 @app.get("/posts")
 def get_posts():
     return {"data": my_posts}
+
+
+@app.get("/sqlalchemy")
+def test_posts(db: Session = Depends(get_db)):
+    return {"status": "success"}
 
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
