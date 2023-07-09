@@ -6,7 +6,7 @@ import models
 import schemas
 
 from fastapi import Depends, status, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, undefer
 from fastapi.security import OAuth2PasswordBearer
 
 
@@ -51,6 +51,8 @@ def get_current_user(token: str = Depends(oath2_scheme),
                                           headers={"WWW-Authenticate": "Bearer"})
 
     token = verify_access_token(token, credentials_exception)
-    user = db.query(models.User).filter(models.User.id == token.id).first()
+    user = db.query(models.User.id, models.User.email, models.User.created_at)\
+        .filter(models.User.id == token.id)\
+        .first()
 
     return user
